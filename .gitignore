@@ -43,9 +43,11 @@ coverage.xml
 # Local Environment
 .env
 
-# Agent-specific instructions and internal coordination (local only)
+# Agent-specific instructions, checklists, and internal reference files (local only)
 AGENT_RULES.md
 PROGRESS.md
+FEATURE_CHECKLIST.md
+docs/design-tokens.md
 .agents/
 .gemini/
 
