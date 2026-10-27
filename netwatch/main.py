@@ -1,7 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from netwatch.api.routes import api_router, root_router
 from netwatch.auth import seed_api_keys
@@ -18,6 +21,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
 )
 logger = logging.getLogger("netwatch.main")
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -101,6 +106,17 @@ def create_app() -> FastAPI:
     # Register root routes (/healthz, /metrics) and API routes (/api/*)
     application.include_router(root_router)
     application.include_router(api_router)
+
+    if STATIC_DIR.exists():
+        application.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @application.get("/", response_class=FileResponse)
+    async def serve_index():
+        index_file = STATIC_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        return Response(content="NetWatch API Running", media_type="text/plain")
+
     return application
 
 

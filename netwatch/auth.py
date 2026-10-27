@@ -2,7 +2,7 @@ import hashlib
 from enum import StrEnum
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,15 +59,26 @@ SessionDep = Annotated[AsyncSession, Depends(get_db)]
 async def get_current_api_key(
     session: SessionDep,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+    api_key_query: Annotated[str | None, Query(alias="api_key")] = None,
+    token_query: Annotated[str | None, Query(alias="token")] = None,
 ) -> ApiKey:
-    """Authenticates incoming requests by checking the X-API-Key header against database hashes."""
-    if not x_api_key:
+    """Authenticates incoming requests by checking headers or query parameters against DB hashes."""
+    raw_key = x_api_key or api_key_query or token_query
+    if not raw_key and authorization:
+        parts = authorization.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            raw_key = parts[1]
+        elif len(parts) == 1:
+            raw_key = parts[0]
+
+    if not raw_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing X-API-Key header",
         )
 
-    key_hash = hash_api_key(x_api_key)
+    key_hash = hash_api_key(raw_key)
     record = await session.scalar(select(ApiKey).where(ApiKey.key_hash == key_hash))
     if not record:
         raise HTTPException(

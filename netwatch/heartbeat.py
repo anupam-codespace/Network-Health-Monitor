@@ -78,6 +78,20 @@ class HeartbeatService:
                     text("SELECT pg_notify(:channel, :payload)"),
                     {"channel": "netwatch_events", "payload": payload},
                 )
+
+            # Broadcast regular heartbeat pulse for live UI latency counters
+            payload_hb = json.dumps(
+                {
+                    "kind": "replica_heartbeat",
+                    "replica_id": self.replica_id,
+                    "role": current_role,
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            await session.execute(
+                text("SELECT pg_notify(:channel, :payload)"),
+                {"channel": "netwatch_events", "payload": payload_hb},
+            )
             await session.commit()
             self._last_role = current_role
 

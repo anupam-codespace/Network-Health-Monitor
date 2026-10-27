@@ -1,8 +1,10 @@
+import asyncio
+import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import case, func, select, text
@@ -22,9 +24,10 @@ from netwatch.api.schemas import (
     TargetResponse,
     TargetTlsSummary,
 )
-from netwatch.auth import require_admin, require_viewer
+from netwatch.auth import ApiKeyDep, require_admin, require_viewer
 from netwatch.config import settings
 from netwatch.db import async_session_maker, get_db
+from netwatch.events import event_broker
 from netwatch.models import EventRecord, Leadership, ProbeResultRecord, ReplicaHeartbeat, Target
 
 SessionDep = Annotated[AsyncSession, Depends(get_db)]
@@ -36,8 +39,12 @@ def parse_time_range(range_param: str) -> tuple[datetime, int]:
     now = datetime.now(timezone.utc)
     if range_param == "1h":
         return now - timedelta(hours=1), 60
+    if range_param == "6h":
+        return now - timedelta(hours=6), 300
     if range_param == "7d":
         return now - timedelta(days=7), 14400
+    if range_param == "30d":
+        return now - timedelta(days=30), 86400
     return now - timedelta(hours=24), 900
 
 
@@ -73,6 +80,24 @@ async def create_target(
     session.add(target)
     await session.commit()
     await session.refresh(target)
+    payload = json.dumps(
+        {
+            "kind": "target_created",
+            "target": {
+                "id": target.id,
+                "host": target.host,
+                "port": target.port,
+                "interval_s": target.interval_s,
+                "enabled": target.enabled,
+            },
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    await session.execute(
+        text("SELECT pg_notify(:channel, :payload)"),
+        {"channel": "netwatch_events", "payload": payload},
+    )
+    await session.commit()
     return target
 
 
@@ -162,6 +187,17 @@ async def delete_target(
             detail=f"Target {target_id} not found",
         )
     await session.delete(target)
+    payload = json.dumps(
+        {
+            "kind": "target_deleted",
+            "target_id": target_id,
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    await session.execute(
+        text("SELECT pg_notify(:channel, :payload)"),
+        {"channel": "netwatch_events", "payload": payload},
+    )
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -443,6 +479,47 @@ async def list_events(
     if events:
         response.headers["X-Next-Cursor"] = str(events[-1].id)
     return events
+
+
+@api_router.get("/stream")
+async def event_stream(
+    request: Request,
+    api_key: ApiKeyDep,
+) -> StreamingResponse:
+    """Streams live Server-Sent Events (SSE) for real-time probe telemetry and cluster state."""
+    queue = event_broker.subscribe()
+
+    async def sse_generator() -> AsyncGenerator[str, None]:
+        try:
+            init_event = json.dumps(
+                {
+                    "kind": "connected",
+                    "replica_id": settings.replica_id,
+                    "role": api_key.role,
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            yield f"data: {init_event}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            event_broker.unsubscribe(queue)
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # Public health and telemetry router
