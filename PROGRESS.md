@@ -32,15 +32,20 @@ Tracking the 6 core development milestones of the NetWatch Network Health Monito
   - [x] High-availability documentation (`docs/ha.md`)
   - [x] `scripts/failover_demo.sh` demonstrating measured leader failover (hard kill: 2.18s, graceful stop: 6.05s)
 
-- [ ] **Prompt 4: Live Event Streaming (SSE) & Advanced API Endpoints**
-  - [ ] PostgreSQL LISTEN/NOTIFY event bus for real-time fan-out
-  - [ ] SSE endpoint `/api/stream` streaming probe results and cluster transitions
-  - [ ] `/api/summary`, `/api/targets/{id}/series`, `/api/cluster`, `/api/export.csv`
+- [x] **Prompt 4: Live Event Streaming (SSE) & Advanced API Endpoints**
+  - [x] PostgreSQL LISTEN/NOTIFY event bus for real-time fan-out (`PostgresEventListener` + `EventBroker`)
+  - [x] SSE endpoint `/api/stream` streaming probe results, cluster transitions, heartbeats, and target updates
+  - [x] Full suite of analytics API endpoints: `/api/summary`, `/api/targets/{id}/series`, `/api/cluster`, `/api/events`, `/api/export.csv`
 
-- [ ] **Prompt 5: Live Dashboard SPA (Vanilla HTML/CSS/JS)**
-  - [ ] Single-page responsive mobile-first dashboard served by FastAPI at `/`
-  - [ ] Real-time phase latency breakdown, target health cards, and replica status badges
-  - [ ] Add-target modal with Admin API key authorization
+- [x] **Prompt 5: Live Dashboard SPA (Vanilla HTML/CSS/JS)**
+  - [x] Single-page responsive mobile-first dashboard served by FastAPI at `/` (96.02 KB total JS+CSS)
+  - [x] Real-time phase latency breakdown (2x2 cards with trend chips), SVG line chart from `/series`, TLS card (amber under 14 days), last-20-probes row (green/red with icons)
+  - [x] Target Detail (`#/target/<id>`), Targets card list (`#/targets`) with search-as-you-type and status filter
+  - [x] Cluster view (`#/cluster`): two replica cards, flip animation on leadership swap, exact `"Leadership gap X.X s"` computed pill from real heartbeat/event timestamps
+  - [x] Admin bottom sheet modal with inline validation; viewers see hidden/disabled controls
+  - [x] Disconnected banner `"Connection lost. Retrying..."` with auto-reconnect, skeletons, empty states
+  - [x] 5 async Playwright E2E tests verifying all screens, failover drill, disconnect handling, and RBAC
+  - [x] Complete mobile (390px) and desktop (1280px) screenshot captures in `docs/screens/`
 
 - [ ] **Prompt 6: Infrastructure, Load Testing, Observability & Documentation**
   - [ ] Grafana datasource and dashboard JSON provisioning

@@ -44,11 +44,14 @@ def _dummy_composite(host: str = "example.com") -> ProbeCompositeResult:
     )
 
 
+TEST_ADVISORY_LOCK_ID = 888777666
+
+
 @pytest.mark.asyncio
 async def test_two_electors_exactly_one_leader(db_session: AsyncSession) -> None:
     """Verifies that between two competing electors, exactly one acquires leadership."""
-    elector1 = LeaderElector("rep-test-1", tick_interval_s=0.1)
-    elector2 = LeaderElector("rep-test-2", tick_interval_s=0.1)
+    elector1 = LeaderElector("rep-test-1", lock_id=TEST_ADVISORY_LOCK_ID, tick_interval_s=0.1)
+    elector2 = LeaderElector("rep-test-2", lock_id=TEST_ADVISORY_LOCK_ID, tick_interval_s=0.1)
 
     try:
         await elector1.start()
@@ -73,8 +76,8 @@ async def test_two_electors_exactly_one_leader(db_session: AsyncSession) -> None
 @pytest.mark.asyncio
 async def test_pg_terminate_backend_promotes_standby(db_session: AsyncSession) -> None:
     """Verifies that abruptly terminating the leader's backend connection triggers failover."""
-    elector1 = LeaderElector("rep-test-1", tick_interval_s=0.1)
-    elector2 = LeaderElector("rep-test-2", tick_interval_s=0.1)
+    elector1 = LeaderElector("rep-test-1", lock_id=TEST_ADVISORY_LOCK_ID, tick_interval_s=0.1)
+    elector2 = LeaderElector("rep-test-2", lock_id=TEST_ADVISORY_LOCK_ID, tick_interval_s=0.1)
 
     try:
         await elector1.start()

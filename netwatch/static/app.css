@@ -370,12 +370,15 @@ button, input, select {
 }
 
 .btn-add-target {
-  display: none;
+  display: inline-flex;
 }
 
-@media (min-width: 600px) {
+@media (max-width: 599px) {
+  .btn-add-target span {
+    display: none;
+  }
   .btn-add-target {
-    display: inline-flex;
+    padding: 8px 12px;
   }
 }
 
