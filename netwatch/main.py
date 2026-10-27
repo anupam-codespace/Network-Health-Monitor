@@ -17,7 +17,7 @@ logger = logging.getLogger("netwatch.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan running schema migrations under advisory lock and seeding credentials."""
+    """Application lifespan running migrations under advisory lock and seeding credentials."""
     logger.info("Starting NetWatch replica '%s'...", settings.replica_id)
     try:
         # Run database migrations safely serialized across replicas
@@ -40,7 +40,7 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="NetWatch API",
         version="0.1.0",
-        description="Network Health Monitor with distributed leader election and real-time dashboard",
+        description="Network Health Monitor with leader failover and real-time dashboard",
         lifespan=lifespan,
     )
 

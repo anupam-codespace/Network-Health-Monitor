@@ -9,12 +9,11 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from netwatch.config import settings
 
 logger = logging.getLogger("netwatch.db")
-
-from sqlalchemy.pool import NullPool
 
 # Postgres advisory lock ID reserved for serializing Alembic schema migrations
 MIGRATION_ADVISORY_LOCK_ID = 918273645
@@ -45,7 +44,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 @asynccontextmanager
 async def acquire_advisory_lock(lock_id: int):
-    """Context manager acquiring a PostgreSQL session-level advisory lock to serialize operations."""
+    """Context manager acquiring a PostgreSQL session-level advisory lock to serialize work."""
     async with engine.connect() as conn:
         logger.info("Attempting to acquire PostgreSQL advisory lock %d", lock_id)
         # Block until lock is granted to guarantee safe serialization across replicas
@@ -72,7 +71,7 @@ def _run_alembic_upgrade_sync(connection) -> None:
 
 
 async def run_migrations_with_lock() -> None:
-    """Acquires a PostgreSQL advisory lock to ensure only one replica runs schema migrations at startup."""
+    """Acquires an advisory lock to ensure only one replica runs migrations at startup."""
     async with acquire_advisory_lock(MIGRATION_ADVISORY_LOCK_ID):
         logger.info("Executing Alembic migrations under advisory lock...")
         async with engine.connect() as conn:
