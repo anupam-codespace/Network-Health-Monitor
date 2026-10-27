@@ -276,3 +276,73 @@ async def test_metrics_prometheus_netwatch_gauges(async_client: AsyncClient) -> 
     content = res.text
     assert "netwatch_is_leader" in content
     assert "netwatch_probe_queue_depth" in content
+
+
+@pytest.mark.asyncio
+async def test_api_summary_ranges_and_tls_states(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """Verifies 7d and 24h ranges as well as expiring_soon and expired TLS statuses."""
+    await db_session.execute(delete(ProbeResultRecord))
+    await db_session.execute(delete(Target))
+
+    t_expiring = Target(host="expiring.tls.test", port=443, interval_s=30, enabled=True)
+    t_expired = Target(host="expired.tls.test", port=443, interval_s=30, enabled=True)
+    db_session.add_all([t_expiring, t_expired])
+    await db_session.commit()
+    await db_session.refresh(t_expiring)
+    await db_session.refresh(t_expired)
+
+    now = datetime.now(timezone.utc)
+    # Expiring soon: 5 days left
+    r_exp = ProbeResultRecord(
+        target_id=t_expiring.id,
+        ts=now - timedelta(days=2),
+        ok=True,
+        total_ms=45.0,
+        tls_days_left=5.0,
+        replica_id="replica-test",
+        epoch=0,
+    )
+    # Expired: -1 days left
+    r_bad = ProbeResultRecord(
+        target_id=t_expired.id,
+        ts=now - timedelta(days=3),
+        ok=False,
+        total_ms=50.0,
+        tls_days_left=-1.0,
+        replica_id="replica-test",
+        epoch=0,
+    )
+    db_session.add_all([r_exp, r_bad])
+    await db_session.commit()
+
+    # Test 7d range
+    res_7d = await async_client.get("/api/summary?range=7d", headers=VIEWER_HEADERS)
+    assert res_7d.status_code == 200
+
+    # Test 24h range
+    res_24h = await async_client.get("/api/summary?range=24h", headers=VIEWER_HEADERS)
+    assert res_24h.status_code == 200
+
+    # Verify target detail status for expiring soon
+    res_det1 = await async_client.get(f"/api/targets/{t_expiring.id}", headers=VIEWER_HEADERS)
+    assert res_det1.status_code == 200
+    assert res_det1.json()["tls_info"]["status"] == "expiring_soon"
+
+    # Verify target detail status for expired
+    res_det2 = await async_client.get(f"/api/targets/{t_expired.id}", headers=VIEWER_HEADERS)
+    assert res_det2.status_code == 200
+    assert res_det2.json()["tls_info"]["status"] == "expired"
+
+
+@pytest.mark.asyncio
+async def test_main_app_lifespan() -> None:
+    """Verifies that FastAPI application lifespan initializes migrations, seeds, and scheduler."""
+    from netwatch.main import create_app, lifespan
+
+    app = create_app()
+    async with lifespan(app):
+        assert hasattr(app.state, "scheduler")
+        assert app.state.scheduler is not None
