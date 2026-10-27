@@ -11,6 +11,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
+show_usage() {
+    cat << 'EOF'
+Usage: scripts/failover_demo.sh [OPTIONS]
+
+Demonstrates automated leader failover between replica-1 (:8001) and replica-2 (:8002).
+Performs both hard crash (SIGKILL/docker kill) and graceful shutdown (SIGTERM/docker stop).
+
+Options:
+  -h, --help    Show this help message and exit
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            show_usage >&2
+            exit 1
+            ;;
+    esac
+done
+
 VIEWER_KEY="${VIEWER_API_KEY:-netwatch-viewer-secret-key-456}"
 AUTH_HEADER="X-API-Key: ${VIEWER_KEY}"
 PORT_1=8001
@@ -163,7 +189,6 @@ CURRENT_LEADER_PORT="${SURVIVOR_PORT}"
 CURRENT_LEADER_CONTAINER="${SURVIVOR_CONTAINER}"
 NEW_SURVIVOR_ID="${LEADER_ID}"
 NEW_SURVIVOR_PORT="${LEADER_PORT}"
-NEW_SURVIVOR_CONTAINER="${LEADER_CONTAINER}"
 NEW_SURVIVOR_URL="http://127.0.0.1:${NEW_SURVIVOR_PORT}"
 
 echo ""

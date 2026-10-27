@@ -183,9 +183,15 @@ async def test_postgres_notify_reaches_subscriber() -> None:
         await pg_notify("netwatch_events", test_payload)
 
         # Wait for subscriber queue to receive broadcast
-        received = await asyncio.wait_for(queue.get(), timeout=3.0)
-        assert received.get("kind") == "test_ping"
-        assert received.get("msg") == "hello_from_pg"
+        found = None
+        for _ in range(10):
+            msg = await asyncio.wait_for(queue.get(), timeout=3.0)
+            if msg.get("kind") == "test_ping":
+                found = msg
+                break
+        assert found is not None
+        assert found.get("kind") == "test_ping"
+        assert found.get("msg") == "hello_from_pg"
     finally:
         broker.unsubscribe(queue)
         await listener.stop()

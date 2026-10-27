@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Lint, Test & Smoke
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: netwatch
+          POSTGRES_PASSWORD: netwatch
+          POSTGRES_DB: netwatch
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U netwatch -d netwatch"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://netwatch:netwatch@127.0.0.1:5432/netwatch
+      ADMIN_API_KEY: netwatch-admin-secret-key-123
+      VIEWER_API_KEY: netwatch-viewer-secret-key-456
+      LOG_LEVEL: INFO
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install ShellCheck & dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck curl
+          pip install --upgrade pip
+          pip install uv
+          uv pip install --system -e ".[dev]"
+
+      - name: Run Ruff Lint & Format Check
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Run ShellCheck on scripts
+        run: |
+          shellcheck scripts/*.sh
+
+      - name: Run Pytest with Coverage Gate (>= 70%)
+        run: |
+          alembic upgrade head
+          pytest --cov=netwatch --cov-report=term-missing --cov-report=xml --cov-fail-under=70
+
+      - name: Build Docker Container
+        run: |
+          docker build -t netwatch:ci .
+
+      - name: Execute End-to-End Smoke Test
+        run: |
+          scripts/smoke.sh --clean

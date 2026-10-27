@@ -47,10 +47,12 @@ Tracking the 6 core development milestones of the NetWatch Network Health Monito
   - [x] 5 async Playwright E2E tests verifying all screens, failover drill, disconnect handling, and RBAC
   - [x] Complete mobile (390px) and desktop (1280px) screenshot captures in `docs/screens/`
 
-- [ ] **Prompt 6: Infrastructure, Load Testing, Observability & Documentation**
-  - [ ] Grafana datasource and dashboard JSON provisioning
-  - [ ] `loadtest/api.js` k6 benchmark script printing RPS and p95/p99
-  - [ ] systemd unit `deploy/netwatch.service`
-  - [ ] Shell scripts (`scripts/install.sh`, `scripts/healthcheck.sh`, `scripts/loadtest.sh`)
-  - [ ] GitHub Actions CI workflow (linting, tests, >=70% coverage gate)
-  - [ ] Final comprehensive README.md
+- [x] **Prompt 6: Infrastructure, Load Testing, Observability & Documentation**
+  - [x] Prometheus config scraping both replicas; Grafana datasource & dashboard JSON committed
+  - [x] `loadtest/api.js` k6 benchmark with console RPS, p95, p99 and `loadtest/last-run.json`
+  - [x] Hardened systemd unit `deploy/netwatch.service` and Linux VPS guide `docs/deploy.md`
+  - [x] Shell scripts with `set -euo pipefail`, usage docs, shellcheck clean (`install.sh`, `healthcheck.sh`, `failover_demo.sh`, `loadtest.sh`, `smoke.sh`)
+  - [x] Comprehensive end-to-end smoke test `scripts/smoke.sh` asserting all 8 cluster invariants
+  - [x] GitHub Actions CI workflow (`.github/workflows/ci.yml`) with ruff, pytest (70% gate), shellcheck, docker build, and smoke test
+  - [x] Complete README.md with quickstart, Mermaid diagram, design decisions, blackbox_exporter comparison, and limitations
+  - [x] Feature verification checklist (`FEATURE_CHECKLIST.md`) documenting all claimed features with proving commands and real outputs

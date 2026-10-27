@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-10-27T18:39:25.551Z",
+  "target_url": "http://127.0.0.1:8001",
+  "total_requests": 2277,
+  "requests_per_second": 142.02,
+  "p95_latency_ms": 41.7,
+  "p99_latency_ms": 61.1,
+  "error_rate": 0
+}
