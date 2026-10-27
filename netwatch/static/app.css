@@ -373,12 +373,20 @@ button, input, select {
   display: inline-flex;
 }
 
-@media (max-width: 599px) {
-  .btn-add-target span {
-    display: none;
-  }
+@media (max-width: 899px) {
   .btn-add-target {
-    padding: 8px 12px;
+    display: none !important;
+  }
+  .user-role-label {
+    display: none !important;
+  }
+  .user-chip {
+    padding: 0;
+    background: transparent;
+  }
+  .user-avatar {
+    width: 36px;
+    height: 36px;
   }
 }
 
