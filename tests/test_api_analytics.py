@@ -225,14 +225,10 @@ async def test_api_target_detail_and_not_found(
     res_404 = await async_client.get("/api/targets/999999", headers=VIEWER_HEADERS)
     assert res_404.status_code == 404
 
-    res_series_404 = await async_client.get(
-        "/api/targets/999999/series", headers=VIEWER_HEADERS
-    )
+    res_series_404 = await async_client.get("/api/targets/999999/series", headers=VIEWER_HEADERS)
     assert res_series_404.status_code == 404
 
-    res_del_404 = await async_client.delete(
-        "/api/targets/999999", headers=ADMIN_HEADERS
-    )
+    res_del_404 = await async_client.delete("/api/targets/999999", headers=ADMIN_HEADERS)
     assert res_del_404.status_code == 404
 
 
