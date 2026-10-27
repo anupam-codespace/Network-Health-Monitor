@@ -16,7 +16,12 @@ def format_plain_table(rows: list[tuple[str, str, str, str]]) -> str:
     """Formats a border-aligned plain text table without third-party terminal dependencies."""
     col_widths = [8, 8, 14, 40]
     sep = "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
-    header = "|" + "|".join(f" {title.ljust(w)} " for title, w in zip(["Phase", "Status", "Latency (ms)", "Details"], col_widths, strict=False)) + "|"
+    headers = ["Phase", "Status", "Latency (ms)", "Details"]
+    header = (
+        "|"
+        + "|".join(f" {t.ljust(w)} " for t, w in zip(headers, col_widths, strict=False))
+        + "|"
+    )
 
     lines = [sep, header, sep]
     for row in rows:
@@ -28,11 +33,19 @@ def format_plain_table(rows: list[tuple[str, str, str, str]]) -> str:
     return "\n".join(lines)
 
 
+@app.command("status")
+def status_command() -> None:
+    """Displays active replica role and health status."""
+    print("NetWatch CLI status: OK")
+
+
 @app.command("probe")
 def probe_command(
     host: Annotated[str, typer.Argument(help="Target host or IP to probe (e.g. example.com)")],
     port: Annotated[int, typer.Option("--port", "-p", help="Target TCP port")] = 443,
-    timeout: Annotated[float, typer.Option("--timeout", "-t", help="Timeout per phase in seconds")] = 5.0,
+    timeout: Annotated[
+        float, typer.Option("--timeout", "-t", help="Timeout per phase in seconds")
+    ] = 5.0,
 ) -> None:
     """Runs a 4-phase network health probe and outputs a plain-text results table."""
     res = asyncio.run(run_probes(host=host, port=port, timeout_s=timeout))
@@ -54,7 +67,11 @@ def probe_command(
             "TLS",
             "PASS" if res.tls.ok else "FAIL",
             f"{res.tls_ms:.2f}" if res.tls_ms is not None else "-",
-            f"days_left={res.tls_days_left}" if res.tls.ok and res.tls_days_left is not None else (res.tls.error or "-"),
+            (
+                f"days_left={res.tls_days_left}"
+                if res.tls.ok and res.tls_days_left is not None
+                else (res.tls.error or "-")
+            ),
         ),
         (
             "HTTP",

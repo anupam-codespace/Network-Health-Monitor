@@ -13,15 +13,15 @@ from netwatch.config import settings
 
 logger = logging.getLogger("netwatch.db")
 
+from sqlalchemy.pool import NullPool
+
 # Postgres advisory lock ID reserved for serializing Alembic schema migrations
 MIGRATION_ADVISORY_LOCK_ID = 918273645
 
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=False,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    poolclass=NullPool,
 )
 
 async_session_maker = async_sessionmaker(
@@ -60,11 +60,12 @@ async def acquire_advisory_lock(lock_id: int):
             logger.info("Released PostgreSQL advisory lock %d", lock_id)
 
 
-def _run_alembic_upgrade() -> None:
+def _run_alembic_upgrade_sync(connection) -> None:
     from alembic import command
     from alembic.config import Config
 
     alembic_cfg = Config("alembic.ini")
+    alembic_cfg.attributes["connection"] = connection
     command.upgrade(alembic_cfg, "head")
 
 
@@ -72,7 +73,8 @@ async def run_migrations_with_lock() -> None:
     """Acquires a PostgreSQL advisory lock to ensure only one replica runs schema migrations at startup."""
     async with acquire_advisory_lock(MIGRATION_ADVISORY_LOCK_ID):
         logger.info("Executing Alembic migrations under advisory lock...")
-        import asyncio
-        await asyncio.to_thread(_run_alembic_upgrade)
+        async with engine.connect() as conn:
+            await conn.run_sync(_run_alembic_upgrade_sync)
+            await conn.commit()
         logger.info("Alembic migrations completed successfully.")
 
