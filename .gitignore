@@ -43,3 +43,11 @@ coverage.xml
 # Local Environment
 .env
 
+# Agent-specific instructions and internal coordination (local only)
+AGENT_RULES.md
+PROGRESS.md
+.agents/
+.gemini/
+
+# Linter and tool caches
+.ruff_cache/
