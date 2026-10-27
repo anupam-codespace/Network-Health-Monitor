@@ -73,3 +73,13 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """Provides an isolated AsyncSession for database tests."""
+    from netwatch.db import async_session_maker, run_migrations_with_lock
+
+    await run_migrations_with_lock()
+    async with async_session_maker() as session:
+        yield session

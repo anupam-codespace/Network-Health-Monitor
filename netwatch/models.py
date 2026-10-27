@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -73,6 +74,11 @@ class ProbeResultRecord(Base):
     epoch: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     target: Mapped["Target"] = relationship("Target", back_populates="results")
+
+    __table_args__ = (
+        Index("ix_results_target_id_ts", "target_id", "ts"),
+        Index("ix_results_target_id_id", "target_id", "id"),
+    )
 
 
 class ApiKey(Base):

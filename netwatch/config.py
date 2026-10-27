@@ -35,6 +35,18 @@ class Settings(BaseSettings):
         default="INFO",
         description="Logging level for standard output",
     )
+    max_concurrent_probes: int = Field(
+        default=50,
+        description="Maximum concurrent probes allowed across the system",
+    )
+    retention_days: int = Field(
+        default=7,
+        description="Number of days to retain probe results in the database",
+    )
+    targets_seed_file: str = Field(
+        default="targets.yaml",
+        description="Path to YAML seed file containing initial targets",
+    )
 
 
 # Singleton settings instance accessed across application lifecycle

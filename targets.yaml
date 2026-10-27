@@ -1,0 +1,17 @@
+# Seed targets loaded once when the targets table is empty
+targets:
+  - host: cloudflare.com
+    port: 443
+    interval_s: 30
+  - host: dns.google
+    port: 443
+    interval_s: 15
+  - host: example.com
+    port: 443
+    interval_s: 30
+  - host: github.com
+    port: 443
+    interval_s: 60
+  - host: wikipedia.org
+    port: 443
+    interval_s: 30
