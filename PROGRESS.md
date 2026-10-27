@@ -14,11 +14,15 @@ Tracking the 6 core development milestones of the NetWatch Network Health Monito
   - [x] Test suite covering probes, RBAC rules, and advisory lock migration race prevention
   - [x] Real verification output verified
 
-- [ ] **Prompt 2: Scheduler, Results Storage, Prometheus Metrics & YAML Seeding**
-  - [ ] Bounded concurrency scheduler with asyncio semaphores
-  - [ ] Telemetry persistence into `results` table
-  - [ ] Seed initial targets from `seeds/targets.yaml`
-  - [ ] Prometheus metrics exporter (`probe_duration_seconds`, `probe_success`, `tls_cert_expiry_days`, `netwatch_is_leader`, `probes_total`)
+- [x] **Prompt 2: Scheduler, Results Storage, Prometheus Metrics & YAML Seeding**
+  - [x] Bounded concurrency scheduler with asyncio semaphores (MAX_CONCURRENT_PROBES, default 50)
+  - [x] Telemetry persistence into `results` table with `replica_id` and `epoch`
+  - [x] Hourly retention engine pruning records older than `RETENTION_DAYS` (default 7)
+  - [x] Seed initial targets from `targets.yaml` (5 reliable public hosts)
+  - [x] Prometheus metrics exporter (`probe_duration_seconds`, `probe_success`, `tls_cert_expiry_days`, `probes_total`, `netwatch_is_leader`, `netwatch_probe_queue_depth`)
+  - [x] Analytics API endpoints: `/api/summary`, keyset-paginated `/api/results`, `/api/targets/{id}/series`, `/api/targets/{id}`, streamed `/api/export.csv`
+  - [x] Alembic migration `002_add_indexes_for_analytics` with composite indexes
+  - [x] Comprehensive test suite (42 tests, 84.8% coverage)
 
 - [ ] **Prompt 3: Leader Election, Heartbeats & Two Replicas Failover**
   - [ ] Dedicated long-lived PostgreSQL advisory lock election engine
