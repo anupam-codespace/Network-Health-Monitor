@@ -100,10 +100,7 @@ async def test_admin_add_target_live_and_screenshots(ensure_cluster_running):
             await page.screenshot(path=str(SCREENS_DIR / f"targets_{suffix}.png"))
 
             # Open Add Target Bottom Sheet
-            if await page.is_visible("#openAddTargetBtn"):
-                await page.click("#openAddTargetBtn")
-            else:
-                await page.click("button:has-text('Add target')")
+            await page.locator("button:has-text('Add target'):visible").first.click()
             await page.wait_for_selector("#addTargetSheet:not(.hidden)")
             await page.wait_for_timeout(400)
             await page.screenshot(path=str(SCREENS_DIR / f"add_target_modal_{suffix}.png"))
