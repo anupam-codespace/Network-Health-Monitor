@@ -22,7 +22,7 @@ def test_cli_help() -> None:
 
 
 def test_format_plain_table() -> None:
-    """Verifies that format_plain_table renders an ASCII table without terminal control characters."""
+    """Verifies that format_plain_table renders an ASCII table cleanly."""
     sample_rows = [
         ("DNS", "PASS", "12.30", "ip=1.1.1.1"),
         ("TCP", "PASS", "24.50", "port=443"),

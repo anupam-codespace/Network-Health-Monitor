@@ -11,8 +11,11 @@ async def send_http_request(
     host: str,
     timeout_s: float = 5.0,
 ) -> HttpResult:
-    """Sends minimal HTTP/1.1 GET over open stream to measure true Time-To-First-Byte in milliseconds."""
-    req = f"GET / HTTP/1.1\r\nHost: {host}\r\nUser-Agent: NetWatch/0.1\r\nConnection: close\r\n\r\n".encode()
+    """Sends minimal HTTP/1.1 GET over stream to measure true Time-To-First-Byte in ms."""
+    raw_req = (
+        f"GET / HTTP/1.1\r\nHost: {host}\r\nUser-Agent: NetWatch/0.1\r\nConnection: close\r\n\r\n"
+    )
+    req = raw_req.encode()
     start = time.perf_counter()
     try:
         writer.write(req)
@@ -55,8 +58,9 @@ async def probe_http(
     """Standalone HTTP probe opening socket, performing optional TLS, and measuring TTFB."""
     try:
         context = (ssl_context or ssl.create_default_context()) if is_tls else None
+        server_name = host if is_tls else None
         reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port, ssl=context, server_hostname=host if is_tls else None),
+            asyncio.open_connection(host, port, ssl=context, server_hostname=server_name),
             timeout=timeout_s,
         )
     except Exception as exc:

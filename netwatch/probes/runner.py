@@ -19,7 +19,7 @@ async def run_probes(
     timeout_s: float = 5.0,
     ssl_context: ssl.SSLContext | None = None,
 ) -> ProbeCompositeResult:
-    """Coordinates the 4-phase probe pipeline across a single connection, recording total latency."""
+    """Coordinates the 4-phase probe pipeline across a single connection."""
     effective_tls = is_tls if is_tls is not None else (port == 443)
     dns_res = await probe_dns(host, timeout_s=timeout_s)
 

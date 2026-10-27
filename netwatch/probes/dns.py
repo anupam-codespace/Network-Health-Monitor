@@ -9,7 +9,7 @@ from netwatch.probes.models import DnsResult
 
 
 async def probe_dns(host: str, timeout_s: float = 5.0) -> DnsResult:
-    """Resolves target hostname via asynchronous dnspython query, recording latency in milliseconds."""
+    """Resolves target hostname via asynchronous dnspython query, recording latency in ms."""
     # Fast path for IP literals to bypass network resolution
     try:
         ipaddress.ip_address(host)

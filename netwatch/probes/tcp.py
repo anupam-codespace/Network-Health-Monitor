@@ -20,10 +20,8 @@ async def connect_tcp(
         return TcpResult(ok=True, tcp_ms=elapsed_ms), (reader, writer)
     except asyncio.TimeoutError:
         elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
-        return (
-            TcpResult(ok=False, tcp_ms=elapsed_ms, error=f"TCP connection timed out after {timeout_s}s"),
-            None,
-        )
+        err = f"TCP connection timed out after {timeout_s}s"
+        return TcpResult(ok=False, tcp_ms=elapsed_ms, error=err), None
     except OSError as exc:
         elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
         return TcpResult(ok=False, tcp_ms=elapsed_ms, error=f"TCP connection failed: {exc}"), None

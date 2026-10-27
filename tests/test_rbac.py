@@ -49,7 +49,7 @@ async def test_viewer_can_read_targets(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_viewer_cannot_post_target(async_client: AsyncClient) -> None:
-    """Verifies that viewer role is blocked with 403 Forbidden when attempting to create a target."""
+    """Verifies that viewer role receives 403 Forbidden when attempting to create a target."""
     headers = {"X-API-Key": settings.viewer_api_key}
     payload = {"host": "example.com", "port": 443, "interval_s": 30}
     res = await async_client.post("/api/targets", json=payload, headers=headers)
@@ -59,7 +59,7 @@ async def test_viewer_cannot_post_target(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_viewer_cannot_delete_target(async_client: AsyncClient) -> None:
-    """Verifies that viewer role is blocked with 403 Forbidden when attempting to delete a target."""
+    """Verifies that viewer role receives 403 Forbidden when attempting to delete a target."""
     headers = {"X-API-Key": settings.viewer_api_key}
     res = await async_client.delete("/api/targets/1", headers=headers)
     assert res.status_code == 403

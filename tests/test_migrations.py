@@ -7,7 +7,7 @@ from netwatch.db import MIGRATION_ADVISORY_LOCK_ID, acquire_advisory_lock, run_m
 
 @pytest.mark.asyncio
 async def test_migration_advisory_lock_mutual_exclusion() -> None:
-    """Verifies that PostgreSQL advisory locks enforce strict mutual exclusion for concurrent migrations."""
+    """Verifies that advisory locks enforce mutual exclusion for concurrent migrations."""
     execution_order: list[str] = []
 
     async def worker(worker_id: str, hold_time_s: float) -> None:
