@@ -6,6 +6,100 @@ NetWatch is an enterprise-grade, active-standby network availability and latency
 
 ---
 
+## System Use Case Model
+
+The following diagram defines the system boundary of NetWatch, mapping primary actors (Cluster Administrator, Viewer / NOC Operator, Automated System Engine, and External Observability) to functional capabilities across target management, live telemetry streaming, fault failover, and metrics collection.
+
+```mermaid
+flowchart LR
+    %% Primary Actors
+    subgraph Actors ["Primary System Actors"]
+        Admin["Site Reliability Engineer<br/>(Cluster Administrator)"]
+        Viewer["NOC / Operations Engineer<br/>(Viewer Role)"]
+        Scheduler["Automated Supervisor<br/>(Leader Replica)"]
+        Prom["Prometheus Server<br/>(Metrics Collector)"]
+    end
+
+    %% System Boundary
+    subgraph NetWatchBoundary ["NetWatch System Boundary"]
+        direction TB
+
+        subgraph UC_TargetMgmt ["Target Lifecycle Management"]
+            UC1["Register Monitored Target<br/>(Host, Port, Interval)"]
+            UC2["Delete Target with Confirmation"]
+            UC3["Search & Filter Target Catalog<br/>(Search-as-you-type, Status Filter)"]
+            UC4["Seed Default Public Targets (YAML)"]
+        end
+
+        subgraph UC_Probing ["Multi-Phase Probing & Telemetry"]
+            UC5["Execute 4-Phase Network Probes<br/>(DNS, TCP, TLS, HTTP)"]
+            UC6["Bound Concurrency with Semaphores"]
+            UC7["Persist Fenced Results (Epoch Check)"]
+            UC8["Prune Historical Records (7d Retention)"]
+        end
+
+        subgraph UC_RealTime ["Real-Time Operations & Dashboard"]
+            UC9["Consume Live SSE Stream (/api/stream)"]
+            UC10["Inspect Soft-Filled Latency Line Chart<br/>(Range Switch: 1h to 30d)"]
+            UC11["Monitor 2x2 Protocol Phase Trends"]
+            UC12["Inspect TLS Certificate Expiry Alerting"]
+            UC13["Audit Last-20-Probes Outcome Row"]
+            UC14["Export Historical Telemetry to CSV"]
+            UC15["Run Ad-Hoc Terminal Probe (CLI)"]
+        end
+
+        subgraph UC_HA ["High Availability & Cluster Management"]
+            UC16["Acquire PostgreSQL Advisory Lock"]
+            UC17["Broadcast 2s Heartbeat Updates"]
+            UC18["Automatic Standby Promotion (< 2.2s)"]
+            UC19["Compute Leadership Gap Time"]
+            UC20["Scrape Prometheus Telemetry (/metrics)"]
+        end
+    end
+
+    %% Actor Relationships
+    Admin --> UC1
+    Admin --> UC2
+    Admin --> UC3
+    Admin --> UC9
+    Admin --> UC10
+    Admin --> UC11
+    Admin --> UC12
+    Admin --> UC13
+    Admin --> UC14
+    Admin --> UC15
+    Admin --> UC19
+
+    Viewer --> UC3
+    Viewer --> UC9
+    Viewer --> UC10
+    Viewer --> UC11
+    Viewer --> UC12
+    Viewer --> UC13
+    Viewer --> UC14
+    Viewer --> UC15
+    Viewer --> UC19
+
+    Scheduler --> UC4
+    Scheduler --> UC5
+    Scheduler --> UC6
+    Scheduler --> UC7
+    Scheduler --> UC8
+    Scheduler --> UC16
+    Scheduler --> UC17
+    Scheduler --> UC18
+
+    Prom --> UC20
+
+    %% Styling
+    classDef actorStyle fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
+    classDef ucStyle fill:#0f172a,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    class Admin,Viewer,Scheduler,Prom actorStyle;
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18,UC19,UC20 ucStyle;
+```
+
+---
+
 ## Executive Overview
 
 Production monitoring systems frequently suffer from three architectural failure modes:
