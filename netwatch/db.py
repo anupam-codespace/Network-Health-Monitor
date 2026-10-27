@@ -53,9 +53,7 @@ async def acquire_advisory_lock(lock_id: int):
         try:
             yield conn
         finally:
-            await conn.execute(
-                text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": lock_id}
-            )
+            await conn.execute(text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": lock_id})
             await conn.commit()
             logger.info("Released PostgreSQL advisory lock %d", lock_id)
 
@@ -78,4 +76,3 @@ async def run_migrations_with_lock() -> None:
             await conn.run_sync(_run_alembic_upgrade_sync)
             await conn.commit()
         logger.info("Alembic migrations completed successfully.")
-

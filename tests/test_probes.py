@@ -15,6 +15,7 @@ from netwatch.probes.tls import parse_cert_days_left, probe_tls
 
 # --- DNS Probe Tests ---
 
+
 @pytest.mark.asyncio
 async def test_probe_dns_ip_literal() -> None:
     """Verifies that IP literals bypass DNS network queries with 0 latency."""
@@ -64,9 +65,11 @@ async def test_probe_dns_timeout() -> None:
 
 # --- TCP Probe Tests with Local Server ---
 
+
 @pytest.mark.asyncio
 async def test_probe_tcp_local_server() -> None:
     """Verifies TCP probe succeeds against a real local socket server."""
+
     async def echo_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         writer.close()
         await writer.wait_closed()
@@ -92,18 +95,18 @@ async def test_probe_tcp_connection_refused() -> None:
 
 # --- TLS Probe Tests with Local TLS Server ---
 
+
 @pytest.mark.asyncio
 async def test_probe_tls_local_server(
     server_ssl_context: ssl.SSLContext, client_ssl_context: ssl.SSLContext
 ) -> None:
     """Verifies TLS handshake latency and certificate days-to-expiry against a local TLS server."""
+
     async def tls_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         writer.close()
         await writer.wait_closed()
 
-    server = await asyncio.start_server(
-        tls_handler, "127.0.0.1", 0, ssl=server_ssl_context
-    )
+    server = await asyncio.start_server(tls_handler, "127.0.0.1", 0, ssl=server_ssl_context)
     port = server.sockets[0].getsockname()[1]
 
     async with server:
@@ -134,9 +137,11 @@ def test_parse_cert_days_left() -> None:
 
 # --- HTTP Probe Tests with Local HTTP Server ---
 
+
 @pytest.mark.asyncio
 async def test_probe_http_local_server() -> None:
     """Verifies HTTP probe measures Time-To-First-Byte against a local HTTP server."""
+
     async def http_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         await reader.readline()
         # Drain remaining headers
@@ -162,6 +167,7 @@ async def test_probe_http_local_server() -> None:
 
 
 # --- Pipeline Runner Tests ---
+
 
 @pytest.mark.asyncio
 async def test_run_probes_full_success() -> None:

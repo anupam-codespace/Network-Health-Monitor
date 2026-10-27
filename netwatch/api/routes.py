@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import select
@@ -9,11 +11,16 @@ from netwatch.config import settings
 from netwatch.db import get_db
 from netwatch.models import Target
 
+SessionDep = Annotated[AsyncSession, Depends(get_db)]
 api_router = APIRouter(prefix="/api")
 
 
-@api_router.get("/targets", response_model=list[TargetResponse], dependencies=[Depends(require_viewer)])
-async def list_targets(session: AsyncSession = Depends(get_db)) -> list[Target]:
+@api_router.get(
+    "/targets",
+    response_model=list[TargetResponse],
+    dependencies=[Depends(require_viewer)],
+)
+async def list_targets(session: SessionDep) -> list[Target]:
     """Retrieves all registered monitoring targets for viewers and admins."""
     stmt = select(Target).order_by(Target.id.asc())
     result = await session.scalars(stmt)
@@ -28,7 +35,7 @@ async def list_targets(session: AsyncSession = Depends(get_db)) -> list[Target]:
 )
 async def create_target(
     payload: TargetCreate,
-    session: AsyncSession = Depends(get_db),
+    session: SessionDep,
 ) -> Target:
     """Registers a new monitoring target with strict host, port, and interval validation."""
     target = Target(
@@ -50,7 +57,7 @@ async def create_target(
 )
 async def delete_target(
     target_id: int,
-    session: AsyncSession = Depends(get_db),
+    session: SessionDep,
 ) -> Response:
     """Deletes an existing target by ID; cascades to all associated historical probe results."""
     target = await session.get(Target, target_id)

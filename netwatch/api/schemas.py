@@ -7,7 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class TargetCreate(BaseModel):
     """Payload schema for registering a new monitored network target."""
 
-    host: str = Field(..., description="Target hostname or IP address", min_length=1, max_length=255)
+    host: str = Field(
+        ..., description="Target hostname or IP address", min_length=1, max_length=255
+    )
     port: int = Field(default=443, ge=1, le=65535, description="Target TCP port (1-65535)")
     interval_s: int = Field(
         default=30, ge=10, le=3600, description="Probe frequency in seconds (10-3600)"
@@ -17,7 +19,7 @@ class TargetCreate(BaseModel):
     @field_validator("host")
     @classmethod
     def validate_host_format(cls, value: str) -> str:
-        """Enforces clean hostname or IP format without URI schemes or invalid control characters."""
+        """Enforces clean hostname or IP format without URI schemes or invalid characters."""
         cleaned = value.strip().lower()
         if "://" in cleaned:
             raise ValueError("Host must not include a protocol scheme (e.g. use 'example.com')")

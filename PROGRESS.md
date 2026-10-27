@@ -2,17 +2,17 @@
 
 Tracking the 6 core development milestones of the NetWatch Network Health Monitor.
 
-- [ ] **Prompt 1: Skeleton, DB Migrations under Advisory Lock, RBAC, Probes & CLI**
-  - [ ] Package skeleton, config with pydantic-settings, `.env.example`, `.gitignore`
-  - [ ] PostgreSQL models for all 6 tables: `targets`, `results`, `api_keys`, `replica_heartbeats`, `leadership`, `events`
-  - [ ] Alembic initial migration with startup execution under PostgreSQL advisory lock
-  - [ ] API-key authentication (SHA-256 hashed keys, admin/viewer RBAC, env seeding)
-  - [ ] Targets CRUD API endpoints with field validation
-  - [ ] 4-phase network probes returning dataclasses with millisecond latencies (DNS, TCP, TLS, HTTP)
-  - [ ] Plain-text table CLI (`netwatch probe <host> [--port 443]`) without Rich dependency
-  - [ ] Multi-stage Dockerfile and docker-compose.yml
-  - [ ] Test suite covering probes, RBAC rules, and advisory lock migration race prevention
-  - [ ] Real verification output verified
+- [x] **Prompt 1: Skeleton, DB Migrations under Advisory Lock, RBAC, Probes & CLI**
+  - [x] Package skeleton, config with pydantic-settings, `.env.example`, `.gitignore`
+  - [x] PostgreSQL models for all 6 tables: `targets`, `results`, `api_keys`, `replica_heartbeats`, `leadership`, `events`
+  - [x] Alembic initial migration with startup execution under PostgreSQL advisory lock
+  - [x] API-key authentication (SHA-256 hashed keys, admin/viewer RBAC, env seeding)
+  - [x] Targets CRUD API endpoints with field validation
+  - [x] 4-phase network probes returning dataclasses with millisecond latencies (DNS, TCP, TLS, HTTP)
+  - [x] Plain-text table CLI (`netwatch probe <host> [--port 443]`) without Rich dependency
+  - [x] Multi-stage Dockerfile and docker-compose.yml
+  - [x] Test suite covering probes, RBAC rules, and advisory lock migration race prevention
+  - [x] Real verification output verified
 
 - [ ] **Prompt 2: Scheduler, Results Storage, Prometheus Metrics & YAML Seeding**
   - [ ] Bounded concurrency scheduler with asyncio semaphores

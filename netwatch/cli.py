@@ -19,9 +19,7 @@ def format_plain_table(rows: list[tuple[str, str, str, str]]) -> str:
     sep = "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
     headers = ["Phase", "Status", "Latency (ms)", "Details"]
     header = (
-        "|"
-        + "|".join(f" {t.ljust(w)} " for t, w in zip(headers, col_widths, strict=False))
-        + "|"
+        "|" + "|".join(f" {t.ljust(w)} " for t, w in zip(headers, col_widths, strict=False)) + "|"
     )
 
     lines = [sep, header, sep]

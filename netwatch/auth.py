@@ -29,9 +29,7 @@ async def seed_api_keys(session: AsyncSession) -> None:
     viewer_hash = hash_api_key(settings.viewer_api_key)
 
     # Check and insert admin key
-    admin_exists = await session.scalar(
-        select(ApiKey).where(ApiKey.key_hash == admin_hash)
-    )
+    admin_exists = await session.scalar(select(ApiKey).where(ApiKey.key_hash == admin_hash))
     if not admin_exists:
         session.add(
             ApiKey(
@@ -42,9 +40,7 @@ async def seed_api_keys(session: AsyncSession) -> None:
         )
 
     # Check and insert viewer key
-    viewer_exists = await session.scalar(
-        select(ApiKey).where(ApiKey.key_hash == viewer_hash)
-    )
+    viewer_exists = await session.scalar(select(ApiKey).where(ApiKey.key_hash == viewer_hash))
     if not viewer_exists:
         session.add(
             ApiKey(
@@ -57,9 +53,12 @@ async def seed_api_keys(session: AsyncSession) -> None:
     await session.commit()
 
 
+SessionDep = Annotated[AsyncSession, Depends(get_db)]
+
+
 async def get_current_api_key(
+    session: SessionDep,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
-    session: AsyncSession = Depends(get_db),
 ) -> ApiKey:
     """Authenticates incoming requests by checking the X-API-Key header against database hashes."""
     if not x_api_key:
