@@ -333,16 +333,29 @@ graph LR
 
 NetWatch is designed mobile-first and verified across viewports from 360px phones to 1280px desktop displays.
 
-### Primary Screen Comparisons
+### Responsive Viewport & Header Architecture
+
+The interface automatically reconfigures layout and navigation density according to viewport constraints:
+
+* **Desktop Viewports (>= 900px)**:
+  * **Unified Top Header**: Features the primary brand mark on the left, centered pill-style route navigation (`Overview`, `Targets`, `Cluster`, `Settings`), a high-visibility `+ Add target` quick-action button, and an operator chip showing the circular avatar along with the explicit role label (`Admin` / `Viewer`).
+  * **Multi-Column Data Density**: Telemetry grids expand to 4-column metric dashboards and wide tabular views with full multi-phase latency columns (DNS, TCP, TLS, HTTP) and inline action controls.
+
+* **Mobile & Small Tablet Viewports (< 900px)**:
+  * **Minimalist Telemetry-First Header**: The top header is decluttered to maximize vertical viewport space for live telemetry streams. The center navigation and header action buttons are hidden, and the user status section strictly displays **only the circular admin profile avatar logo**, eliminating distracting secondary text or extraneous status pills.
+  * **Thumb-Driven Bottom Navigation**: Core screen navigation shifts to an ergonomic fixed bottom navigation bar with 44px touch targets.
+  * **Adaptive Modal Presentations**: The target registration modal automatically transitions from a centered desktop dialog into a native slide-up bottom sheet with a tactile drag handle.
+
+### Operational Screen Comparison Matrix
 
 | Operational View | Mobile Viewport (390px) | Desktop Viewport (1280px) |
 | :--- | :--- | :--- |
-| **Cluster Overview**<br/>Top 4-column card grid, 3 summary cards, active replica indicator, and live cluster state. | <img src="docs/screens/overview_390px.png" width="300" alt="Overview Mobile View" /> | <img src="docs/screens/overview_1280px.png" width="550" alt="Overview Desktop View" /> |
-| **Targets Card List**<br/>Card list with search-as-you-type input, status segmentation pills, and responsive touch targets. | <img src="docs/screens/targets_390px.png" width="300" alt="Targets Mobile View" /> | <img src="docs/screens/targets_1280px.png" width="550" alt="Targets Desktop View" /> |
-| **Target Detail & Chart**<br/>Soft-filled SVG latency chart, working range switch, 2x2 phase breakdown, and TLS status. | <img src="docs/screens/target_detail_390px.png" width="300" alt="Target Detail Mobile View" /> | <img src="docs/screens/target_detail_1280px.png" width="550" alt="Target Detail Desktop View" /> |
-| **Cluster View & Timeline**<br/>Dual replica cards, 3D flip badge animation, exact leadership gap pill, and audit log. | <img src="docs/screens/cluster_390px.png" width="300" alt="Cluster Mobile View" /> | <img src="docs/screens/cluster_1280px.png" width="550" alt="Cluster Desktop View" /> |
-| **Add Target Bottom Sheet**<br/>Slide-up sheet with drag handle, segmented interval switch, and inline validation errors. | <img src="docs/screens/add_target_modal_390px.png" width="300" alt="Add Target Mobile View" /> | <img src="docs/screens/add_target_modal_1280px.png" width="550" alt="Add Target Desktop View" /> |
-| **Settings & Security**<br/>Displays active role, serving replica node, key credentials, and secure sign-out. | <img src="docs/screens/settings_390px.png" width="300" alt="Settings Mobile View" /> | <img src="docs/screens/settings_1280px.png" width="550" alt="Settings Desktop View" /> |
+| **Cluster Overview**<br/>**Key Telemetry**: Global uptime percentage, 24-hour mean latency, target count, active alerts.<br/>**Layout**: Responsive 4-card metric summary, serving replica node pill, and live targets table with live SSE status updates. | <img src="docs/screens/overview_390px.png" width="300" alt="Overview Mobile View" /> | <img src="docs/screens/overview_1280px.png" width="550" alt="Overview Desktop View" /> |
+| **Targets Catalog & Search**<br/>**Key Telemetry**: Instant hostname search-as-you-type, segmented status pills (`All`, `Up`, `Failing`), interval timings.<br/>**Layout**: Card-based touch list on mobile; dense tabular list on desktop with inline delete verification. | <img src="docs/screens/targets_390px.png" width="300" alt="Targets Mobile View" /> | <img src="docs/screens/targets_1280px.png" width="550" alt="Targets Desktop View" /> |
+| **Target Telemetry & Detail**<br/>**Key Telemetry**: Vector SVG latency chart with cubic curve interpolation, 5 time ranges (`1h` to `30d`), 2x2 phase breakdown, TLS certificate expiry tracking, and last-20-probes icon row.<br/>**Layout**: Vertical stacking on mobile; side-by-side telemetry cards with full-width chart on desktop. | <img src="docs/screens/target_detail_390px.png" width="300" alt="Target Detail Mobile View" /> | <img src="docs/screens/target_detail_1280px.png" width="550" alt="Target Detail Desktop View" /> |
+| **Cluster Topology & Audit Log**<br/>**Key Telemetry**: Dual replica state (`replica-1`, `replica-2`), 3D flip card badge transitions (`LEADER` / `STANDBY`), calculated failover gap duration, and live audit event log.<br/>**Layout**: Stacked node cards on mobile; side-by-side node topology grid on desktop. | <img src="docs/screens/cluster_390px.png" width="300" alt="Cluster Mobile View" /> | <img src="docs/screens/cluster_1280px.png" width="550" alt="Cluster Desktop View" /> |
+| **Add Target Modal / Bottom Sheet**<br/>**Key Telemetry**: Hostname input, TCP port selector, segmented interval switcher (15s, 30s, 60s), and instant client-side validation.<br/>**Layout**: Native slide-up bottom sheet with swipe handle on mobile; centered modal window on desktop. | <img src="docs/screens/add_target_modal_390px.png" width="300" alt="Add Target Mobile View" /> | <img src="docs/screens/add_target_modal_1280px.png" width="550" alt="Add Target Desktop View" /> |
+| **Settings & Security Profile**<br/>**Key Telemetry**: Authenticated role display, active replica node affinity, masked API key credentials, and authenticated session sign-out.<br/>**Layout**: Touch-friendly configuration form with accessible 44px buttons. | <img src="docs/screens/settings_390px.png" width="300" alt="Settings Mobile View" /> | <img src="docs/screens/settings_1280px.png" width="550" alt="Settings Desktop View" /> |
 
 ---
 
@@ -399,7 +412,7 @@ pytest tests/test_e2e_playwright.py -v
    Probing isolates DNS, TCP, TLS, and HTTP phases sequentially. Monotonic clocks (`time.perf_counter()`) ensure timing accuracy, and early phase failures skip subsequent layers cleanly without throwing unhandled exceptions.
 
 5. **Ultra-Lightweight Mobile-First Vanilla SPA**:
-   The frontend is implemented entirely in vanilla HTML5, CSS3, and JavaScript totaling `96.02 KB` combined (CSS: 28.70 KB, JS: 67.32 KB). It avoids bloated frameworks, guaranteeing 44px touch targets, zero layout shifts, and fast loading even on low-bandwidth mobile connections.
+   The frontend is implemented entirely in vanilla HTML5, CSS3, and JavaScript totaling `96.15 KB` combined (CSS: 28.83 KB, JS: 67.32 KB). It avoids bloated frameworks, guaranteeing 44px touch targets, zero layout shifts, and fast loading even on low-bandwidth mobile connections.
 
 ---
 
