@@ -1,64 +1,44 @@
 import asyncio
 import time
+from netwatch.probes.models import TcpResult
 
-from netwatch.probes.models import PhaseResult
 
-
-async def probe_tcp(
-    host: str,
-    port: int = 443,
-    ip: str | None = None,
-    timeout: float = 5.0,
-) -> PhaseResult:
-    """Probes raw TCP connectivity to isolate routing and firewall state before TLS handshakes."""
-    # Target the pre-resolved IP if provided to avoid redundant DNS lookups during TCP phase
-    connect_target = ip if ip is not None else host
+async def connect_tcp(
+    ip: str,
+    port: int,
+    timeout_s: float = 5.0,
+) -> tuple[TcpResult, tuple[asyncio.StreamReader, asyncio.StreamWriter] | None]:
+    """Establishes raw TCP socket connection, returning latency in ms and live stream pair."""
     start = time.perf_counter()
-
     try:
         reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(connect_target, port),
-            timeout=timeout,
+            asyncio.open_connection(ip, port),
+            timeout=timeout_s,
         )
-        duration = time.perf_counter() - start
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return TcpResult(ok=True, tcp_ms=elapsed_ms), (reader, writer)
+    except asyncio.TimeoutError:
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return (
+            TcpResult(ok=False, tcp_ms=elapsed_ms, error=f"TCP connection timed out after {timeout_s}s"),
+            None,
+        )
+    except OSError as exc:
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return TcpResult(ok=False, tcp_ms=elapsed_ms, error=f"TCP connection failed: {exc}"), None
+    except Exception as exc:
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return TcpResult(ok=False, tcp_ms=elapsed_ms, error=f"Unexpected TCP error: {exc}"), None
 
-        # Immediately close socket to avoid lingering ESTABLISHED connections on the probed host
+
+async def probe_tcp(ip: str, port: int, timeout_s: float = 5.0) -> TcpResult:
+    """Standalone TCP probe establishing and immediately closing socket connection."""
+    res, streams = await connect_tcp(ip, port, timeout_s=timeout_s)
+    if streams:
+        _, writer = streams
         writer.close()
         try:
             await writer.wait_closed()
         except Exception:
             pass
-
-        return PhaseResult(
-            phase="tcp",
-            success=True,
-            duration_seconds=duration,
-            details={"connected_to": connect_target, "port": port},
-        )
-    except asyncio.TimeoutError:
-        duration = time.perf_counter() - start
-        return PhaseResult(
-            phase="tcp",
-            success=False,
-            duration_seconds=duration,
-            error=f"TCP connection to {connect_target}:{port} timed out after {timeout}s",
-            details={"connected_to": connect_target, "port": port},
-        )
-    except OSError as exc:
-        duration = time.perf_counter() - start
-        return PhaseResult(
-            phase="tcp",
-            success=False,
-            duration_seconds=duration,
-            error=f"TCP connection failed: {exc}",
-            details={"connected_to": connect_target, "port": port},
-        )
-    except Exception as exc:
-        duration = time.perf_counter() - start
-        return PhaseResult(
-            phase="tcp",
-            success=False,
-            duration_seconds=duration,
-            error=f"Unexpected TCP error: {exc}",
-            details={"connected_to": connect_target, "port": port},
-        )
+    return res

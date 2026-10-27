@@ -1,67 +1,71 @@
+import asyncio
+import ssl
 import time
+from netwatch.probes.models import HttpResult
 
-import httpx
 
-from netwatch.probes.models import PhaseResult
+async def send_http_request(
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+    host: str,
+    timeout_s: float = 5.0,
+) -> HttpResult:
+    """Sends minimal HTTP/1.1 GET over open stream to measure true Time-To-First-Byte in milliseconds."""
+    req = f"GET / HTTP/1.1\r\nHost: {host}\r\nUser-Agent: NetWatch/0.1\r\nConnection: close\r\n\r\n".encode()
+    start = time.perf_counter()
+    try:
+        writer.write(req)
+        await writer.drain()
+
+        # Read first status line to capture TTFB before large response body chunks arrive
+        line = await asyncio.wait_for(reader.readline(), timeout=timeout_s)
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+
+        raw_line = line.decode("iso-8859-1").strip()
+        parts = raw_line.split(" ", 2)
+        if len(parts) >= 2 and parts[1].isdigit():
+            status_code = int(parts[1])
+            ok = status_code < 500
+            error = None if ok else f"HTTP {status_code} Server Error"
+            return HttpResult(ok=ok, http_ms=elapsed_ms, status_code=status_code, error=error)
+
+        return HttpResult(
+            ok=False,
+            http_ms=elapsed_ms,
+            error=f"Malformed HTTP response line: {raw_line[:64]}",
+        )
+    except asyncio.TimeoutError:
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return HttpResult(
+            ok=False, http_ms=elapsed_ms, error=f"HTTP TTFB timed out after {timeout_s}s"
+        )
+    except Exception as exc:
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return HttpResult(ok=False, http_ms=elapsed_ms, error=f"HTTP probe failed: {exc}")
 
 
 async def probe_http(
-    url: str,
-    timeout: float = 5.0,
-    client: httpx.AsyncClient | None = None,
-) -> PhaseResult:
-    """Measures HTTP time-to-first-byte via streaming to isolate server latency."""
-    start = time.perf_counter()
+    host: str,
+    port: int = 80,
+    is_tls: bool = False,
+    timeout_s: float = 5.0,
+    ssl_context: ssl.SSLContext | None = None,
+) -> HttpResult:
+    """Standalone HTTP probe opening socket, performing optional TLS, and measuring TTFB."""
+    try:
+        context = (ssl_context or ssl.create_default_context()) if is_tls else None
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port, ssl=context, server_hostname=host if is_tls else None),
+            timeout=timeout_s,
+        )
+    except Exception as exc:
+        return HttpResult(ok=False, error=f"Transport connection failed: {exc}")
 
-    async def _execute_probe(active_client: httpx.AsyncClient) -> PhaseResult:
-        nonlocal start
-        start = time.perf_counter()
+    try:
+        return await send_http_request(reader, writer, host, timeout_s=timeout_s)
+    finally:
+        writer.close()
         try:
-            # Streaming request pauses after headers are received, accurately capturing TTFB
-            async with active_client.stream("GET", url, timeout=timeout) as response:
-                ttfb = time.perf_counter() - start
-                status_code = response.status_code
-                http_version = response.http_version
-
-                return PhaseResult(
-                    phase="http",
-                    success=status_code < 500,
-                    duration_seconds=ttfb,
-                    error=None if status_code < 500 else f"HTTP {status_code} Server Error",
-                    details={
-                        "status_code": status_code,
-                        "http_version": http_version,
-                        "content_type": response.headers.get("content-type"),
-                    },
-                )
-        except httpx.TimeoutException:
-            ttfb = time.perf_counter() - start
-            return PhaseResult(
-                phase="http",
-                success=False,
-                duration_seconds=ttfb,
-                error=f"HTTP request to {url} timed out after {timeout}s",
-            )
-        except httpx.RequestError as exc:
-            ttfb = time.perf_counter() - start
-            return PhaseResult(
-                phase="http",
-                success=False,
-                duration_seconds=ttfb,
-                error=f"HTTP request failed: {exc}",
-            )
-        except Exception as exc:
-            ttfb = time.perf_counter() - start
-            return PhaseResult(
-                phase="http",
-                success=False,
-                duration_seconds=ttfb,
-                error=f"Unexpected HTTP error: {exc}",
-            )
-
-    if client is not None:
-        return await _execute_probe(client)
-
-    # Use follow_redirects=True to test full user-facing flow up to the target landing page
-    async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as managed_client:
-        return await _execute_probe(managed_client)
+            await writer.wait_closed()
+        except Exception:
+            pass
