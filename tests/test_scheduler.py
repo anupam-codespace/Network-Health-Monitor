@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -6,7 +7,7 @@ from prometheus_client import REGISTRY
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from netwatch.models import ProbeResultRecord, Target
+from netwatch.models import Leadership, ProbeResultRecord, Target
 from netwatch.probes.models import (
     DnsResult,
     HttpResult,
@@ -65,6 +66,9 @@ async def test_failing_target_does_not_block_others(db_session: AsyncSession) ->
     """Verifies that a failing target records failure telemetry and does not halt other targets."""
     await db_session.execute(delete(ProbeResultRecord))
     await db_session.execute(delete(Target))
+    await db_session.execute(delete(Leadership))
+    lead = Leadership(epoch=0, holder="replica-test", acquired_at=datetime.now(timezone.utc))
+    db_session.add(lead)
 
     t_fail = Target(host="fail.target.test", port=443, interval_s=10, enabled=True)
     t_succ = Target(host="success.target.test", port=443, interval_s=10, enabled=True)

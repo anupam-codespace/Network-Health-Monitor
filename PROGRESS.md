@@ -24,11 +24,13 @@ Tracking the 6 core development milestones of the NetWatch Network Health Monito
   - [x] Alembic migration `002_add_indexes_for_analytics` with composite indexes
   - [x] Comprehensive test suite (42 tests, 84.8% coverage)
 
-- [ ] **Prompt 3: Leader Election, Heartbeats & Two Replicas Failover**
-  - [ ] Dedicated long-lived PostgreSQL advisory lock election engine
-  - [ ] 2-second replica heartbeat engine updating `replica_heartbeats`
-  - [ ] Two-replica Docker Compose configuration (replica-1 on 8001, replica-2 on 8002)
-  - [ ] `scripts/failover_demo.sh` demonstrating measured leader failover
+- [x] **Prompt 3: Leader Election, Heartbeats & Two Replicas Failover**
+  - [x] Dedicated long-lived PostgreSQL advisory lock election engine (`netwatch/leader.py`)
+  - [x] 2-second replica heartbeat engine updating `replica_heartbeats` (`netwatch/heartbeat.py`)
+  - [x] Two-replica Docker Compose configuration (replica-1 on 8001, replica-2 on 8002)
+  - [x] Monotonic epoch fencing on results table rejecting stale writes (`netwatch/storage.py`)
+  - [x] High-availability documentation (`docs/ha.md`)
+  - [x] `scripts/failover_demo.sh` demonstrating measured leader failover (hard kill: 2.18s, graceful stop: 6.05s)
 
 - [ ] **Prompt 4: Live Event Streaming (SSE) & Advanced API Endpoints**
   - [ ] PostgreSQL LISTEN/NOTIFY event bus for real-time fan-out

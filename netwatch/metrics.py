@@ -37,6 +37,11 @@ netwatch_probe_queue_depth = Gauge(
     "Number of probe tasks currently queued or running",
 )
 
+netwatch_fenced_writes_total = Counter(
+    "netwatch_fenced_writes_total",
+    "Total count of probe result writes rejected due to stale epoch fencing",
+)
+
 
 def update_probe_metrics(host: str, result: ProbeCompositeResult) -> None:
     """Updates Prometheus gauges and counters with the latest probe telemetry."""

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -125,3 +126,34 @@ class TargetDetailResponse(BaseModel):
     latest_result: ProbeResultResponse | None = None
     recent_outcomes: list[ProbeOutcomeSummary] = Field(default_factory=list)
     tls_info: TargetTlsSummary | None = None
+
+
+class ReplicaInfo(BaseModel):
+    """Liveness and role metadata for a cluster replica."""
+
+    id: str
+    role: str
+    last_seen: datetime
+    age_s: float
+    alive: bool
+
+
+class EventResponse(BaseModel):
+    """Cluster transition or probe event record from the audit log."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ts: datetime
+    kind: str
+    replica_id: str
+    detail: dict[str, Any] = Field(default_factory=dict)
+
+
+class ClusterStatusResponse(BaseModel):
+    """Cluster overview returning active replicas, current epoch, leader, and recent events."""
+
+    replicas: list[ReplicaInfo] = Field(default_factory=list)
+    current_epoch: int
+    leader: str | None = None
+    recent_events: list[EventResponse] = Field(default_factory=list)

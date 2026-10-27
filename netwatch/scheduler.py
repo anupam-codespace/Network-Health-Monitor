@@ -27,11 +27,13 @@ class ProbeScheduler:
         self,
         max_concurrency: int | None = None,
         leader_fn: Callable[[], bool] = is_leader,
+        epoch_fn: Callable[[], int] = (lambda: 0),
         sync_interval_s: float = 2.0,
     ) -> None:
         self.max_concurrency = max_concurrency or settings.max_concurrent_probes
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.leader_fn = leader_fn
+        self.epoch_fn = epoch_fn
         self.sync_interval_s = sync_interval_s
         self.running_tasks: dict[int, asyncio.Task[None]] = {}
         self.target_intervals: dict[int, int] = {}
@@ -164,8 +166,16 @@ class ProbeScheduler:
                 host=host,
                 result=result,
                 replica_id=settings.replica_id,
-                epoch=0,
+                epoch=self.epoch_fn(),
             )
+
+    async def cancel_probes(self) -> None:
+        """Explicitly cancels all running probe tasks when stepping down from leadership."""
+        await self._cancel_all_probes()
+
+    async def trigger_reconcile(self) -> None:
+        """Immediately wakes up supervisor to reconcile targets without waiting."""
+        await self._reconcile_targets()
 
     async def _retention_loop(self) -> None:
         """Hourly task pruning historical probe records past retention threshold."""

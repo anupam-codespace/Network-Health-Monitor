@@ -1,7 +1,9 @@
 import logging
+import socket
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+import asyncpg
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -17,6 +19,8 @@ logger = logging.getLogger("netwatch.db")
 
 # Postgres advisory lock ID reserved for serializing Alembic schema migrations
 MIGRATION_ADVISORY_LOCK_ID = 918273645
+# Postgres advisory lock ID reserved for cluster leader election
+LEADER_ADVISORY_LOCK_ID = 827364501
 
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
@@ -76,3 +80,39 @@ async def run_migrations_with_lock() -> None:
             await conn.run_sync(_run_alembic_upgrade_sync)
             await conn.commit()
         logger.info("Alembic migrations completed successfully.")
+
+
+async def get_raw_asyncpg_connection(
+    dsn: str | None = None,
+    aggressive_keepalives: bool = True,
+) -> asyncpg.Connection:
+    """Creates a dedicated raw asyncpg connection with aggressive TCP keepalives."""
+    raw_dsn = (dsn or settings.database_url).replace("postgresql+asyncpg://", "postgresql://")
+    server_settings = (
+        {
+            "tcp_keepalives_idle": "1",
+            "tcp_keepalives_interval": "1",
+            "tcp_keepalives_count": "3",
+        }
+        if aggressive_keepalives
+        else None
+    )
+    conn = await asyncpg.connect(raw_dsn, server_settings=server_settings)
+    if aggressive_keepalives:
+        sock = conn._transport.get_extra_info("socket")
+        if sock:
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            except Exception:
+                pass
+    return conn
+
+
+async def pg_notify(channel: str, payload: str) -> None:
+    """Broadcasts a real-time event across replicas via PostgreSQL LISTEN/NOTIFY."""
+    async with async_session_maker() as session:
+        await session.execute(
+            text("SELECT pg_notify(:channel, :payload)"),
+            {"channel": channel, "payload": payload},
+        )
+        await session.commit()

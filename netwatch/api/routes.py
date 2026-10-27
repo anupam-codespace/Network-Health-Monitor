@@ -9,10 +9,13 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from netwatch.api.schemas import (
+    ClusterStatusResponse,
+    EventResponse,
     LatencyPoint,
     PhaseSeriesPoint,
     ProbeOutcomeSummary,
     ProbeResultResponse,
+    ReplicaInfo,
     SummaryResponse,
     TargetCreate,
     TargetDetailResponse,
@@ -22,7 +25,7 @@ from netwatch.api.schemas import (
 from netwatch.auth import require_admin, require_viewer
 from netwatch.config import settings
 from netwatch.db import async_session_maker, get_db
-from netwatch.models import ProbeResultRecord, Target
+from netwatch.models import EventRecord, Leadership, ProbeResultRecord, ReplicaHeartbeat, Target
 
 SessionDep = Annotated[AsyncSession, Depends(get_db)]
 api_router = APIRouter(prefix="/api")
@@ -367,6 +370,79 @@ async def export_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@api_router.get(
+    "/cluster",
+    response_model=ClusterStatusResponse,
+    dependencies=[Depends(require_viewer)],
+)
+async def get_cluster_status(session: SessionDep) -> ClusterStatusResponse:
+    """Returns cluster state including active replica heartbeats, current epoch, and events."""
+    now = datetime.now(timezone.utc)
+    stmt_hb = select(ReplicaHeartbeat).order_by(ReplicaHeartbeat.replica_id.asc())
+    heartbeats = (await session.scalars(stmt_hb)).all()
+
+    replica_list: list[ReplicaInfo] = []
+    leader_id: str | None = None
+    for hb in heartbeats:
+        age_s = max(0.0, round((now - hb.last_seen).total_seconds(), 2))
+        alive = age_s <= 6.0
+        if hb.role == "LEADER" and alive:
+            leader_id = hb.replica_id
+        replica_list.append(
+            ReplicaInfo(
+                id=hb.replica_id,
+                role=hb.role,
+                last_seen=hb.last_seen,
+                age_s=age_s,
+                alive=alive,
+            )
+        )
+
+    stmt_lead = select(Leadership).order_by(Leadership.epoch.desc()).limit(1)
+    leadership = await session.scalar(stmt_lead)
+    current_epoch = leadership.epoch if leadership else 0
+    if not leader_id and leadership:
+        leader_id = leadership.holder
+
+    stmt_events = select(EventRecord).order_by(EventRecord.id.desc()).limit(20)
+    events = (await session.scalars(stmt_events)).all()
+    recent_events = [EventResponse.model_validate(e) for e in events]
+
+    return ClusterStatusResponse(
+        replicas=replica_list,
+        current_epoch=current_epoch,
+        leader=leader_id,
+        recent_events=recent_events,
+    )
+
+
+@api_router.get(
+    "/events",
+    response_model=list[EventResponse],
+    dependencies=[Depends(require_viewer)],
+)
+async def list_events(
+    session: SessionDep,
+    response: Response,
+    limit: int = Query(default=20, ge=1, le=100),
+    before: int | None = Query(
+        default=None, description="Cursor keyset: return records with id < before"
+    ),
+    kind: str | None = Query(default=None, description="Optional filter by event kind"),
+) -> list[EventRecord]:
+    """Keyset-paginated cluster events audit trail."""
+    stmt = select(EventRecord).order_by(EventRecord.id.desc()).limit(limit)
+    if before is not None:
+        stmt = stmt.where(EventRecord.id < before)
+    if kind is not None:
+        stmt = stmt.where(EventRecord.kind == kind)
+
+    events = list((await session.scalars(stmt)).all())
+    if events:
+        response.headers["X-Next-Cursor"] = str(events[-1].id)
+    return events
 
 
 # Public health and telemetry router

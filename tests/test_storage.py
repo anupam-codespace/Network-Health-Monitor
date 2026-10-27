@@ -6,7 +6,7 @@ from prometheus_client import REGISTRY
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from netwatch.models import ProbeResultRecord, Target
+from netwatch.models import Leadership, ProbeResultRecord, Target
 from netwatch.probes.models import (
     DnsResult,
     HttpResult,
@@ -21,8 +21,11 @@ from netwatch.storage import record_result, run_retention_cleanup
 @pytest.mark.asyncio
 async def test_record_result_persists_telemetry(db_session: AsyncSession) -> None:
     """Verifies that record_result persists probe telemetry and updates Prometheus metrics."""
-    # Clean previous results for target
+    # Clean previous results for target and set leadership epoch to 0
     await db_session.execute(delete(ProbeResultRecord))
+    await db_session.execute(delete(Leadership))
+    now = datetime.now(timezone.utc)
+    db_session.add(Leadership(epoch=0, holder="replica-test", acquired_at=now))
     target = Target(host="test.example.com", port=443, interval_s=30, enabled=True)
     db_session.add(target)
     await db_session.commit()
