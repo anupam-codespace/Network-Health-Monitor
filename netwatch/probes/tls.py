@@ -1,8 +1,9 @@
 import asyncio
-from datetime import datetime, timezone
 import ssl
 import time
+from datetime import datetime, timezone
 from typing import Any
+
 from netwatch.probes.models import TlsResult
 
 

@@ -1,8 +1,8 @@
 import ssl
+
 from netwatch.probes.dns import probe_dns
 from netwatch.probes.http import send_http_request
 from netwatch.probes.models import (
-    DnsResult,
     HttpResult,
     ProbeCompositeResult,
     TcpResult,

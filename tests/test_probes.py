@@ -1,17 +1,17 @@
 import asyncio
 import ssl
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import dns.exception
 import dns.resolver
 import pytest
 
 from netwatch.probes.dns import probe_dns
-from netwatch.probes.http import probe_http, send_http_request
+from netwatch.probes.http import probe_http
 from netwatch.probes.models import DnsResult, HttpResult, TcpResult, TlsResult
 from netwatch.probes.runner import run_probes
-from netwatch.probes.tcp import connect_tcp, probe_tcp
-from netwatch.probes.tls import parse_cert_days_left, probe_tls, upgrade_to_tls
-
+from netwatch.probes.tcp import probe_tcp
+from netwatch.probes.tls import parse_cert_days_left, probe_tls
 
 # --- DNS Probe Tests ---
 

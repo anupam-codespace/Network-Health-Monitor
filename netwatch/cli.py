@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from typing import Annotated
+
 import typer
 
 from netwatch.probes.runner import run_probes

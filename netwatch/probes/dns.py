@@ -1,5 +1,6 @@
 import ipaddress
 import time
+
 import dns.asyncresolver
 import dns.exception
 import dns.resolver

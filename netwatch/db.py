@@ -1,6 +1,7 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-import logging
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -61,8 +62,9 @@ async def acquire_advisory_lock(lock_id: int):
 
 
 def _run_alembic_upgrade_sync(connection) -> None:
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     alembic_cfg.attributes["connection"] = connection

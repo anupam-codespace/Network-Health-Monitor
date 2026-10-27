@@ -1,6 +1,7 @@
-from enum import StrEnum
 import hashlib
+from enum import StrEnum
 from typing import Annotated
+
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,10 +79,13 @@ async def get_current_api_key(
     return record
 
 
-def require_role(required_role: Role):
-    """Enforces role-based authorization hierarchy (Admin has access to all; Viewer is read-only)."""
+ApiKeyDep = Annotated[ApiKey, Depends(get_current_api_key)]
 
-    async def _role_checker(api_key: ApiKey = Depends(get_current_api_key)) -> ApiKey:
+
+def require_role(required_role: Role):
+    """Enforces role-based hierarchy (Admin has full access; Viewer is read-only)."""
+
+    async def _role_checker(api_key: ApiKeyDep) -> ApiKey:
         if required_role == Role.ADMIN and api_key.role != Role.ADMIN:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

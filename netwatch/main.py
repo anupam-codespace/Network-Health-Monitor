@@ -1,5 +1,6 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from netwatch.api.routes import api_router, root_router

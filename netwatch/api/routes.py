@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from netwatch.api.schemas import TargetCreate, TargetResponse

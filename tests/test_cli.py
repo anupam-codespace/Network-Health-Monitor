@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock, patch
+
 from typer.testing import CliRunner
 
 from netwatch.cli import app, format_plain_table

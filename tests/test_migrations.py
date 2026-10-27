@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 
 from netwatch.db import MIGRATION_ADVISORY_LOCK_ID, acquire_advisory_lock, run_migrations_with_lock
@@ -22,13 +23,11 @@ async def test_migration_advisory_lock_mutual_exclusion() -> None:
 
     await asyncio.gather(task1, task2)
 
-    # Assert sequential non-overlapping execution
-    assert execution_order == [
-        "worker_1_start",
-        "worker_1_end",
-        "worker_2_start",
-        "worker_2_end",
-    ]
+    # Assert sequential non-overlapping execution (one worker must finish before the other starts)
+    assert execution_order in (
+        ["worker_1_start", "worker_1_end", "worker_2_start", "worker_2_end"],
+        ["worker_2_start", "worker_2_end", "worker_1_start", "worker_1_end"],
+    )
 
 
 @pytest.mark.asyncio

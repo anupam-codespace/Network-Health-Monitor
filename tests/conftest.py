@@ -1,18 +1,13 @@
-from collections.abc import AsyncGenerator
-import os
-from pathlib import Path
 import ssl
 import subprocess
+from collections.abc import AsyncGenerator
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from netwatch.auth import seed_api_keys
-from netwatch.config import settings
-from netwatch.db import get_db
 from netwatch.main import create_app
-from netwatch.models import Base
 
 
 @pytest.fixture(scope="session")
@@ -66,26 +61,15 @@ def client_ssl_context(tls_cert_and_key: tuple[str, str]) -> ssl.SSLContext:
 @pytest_asyncio.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Provides an authenticated AsyncClient bound to the FastAPI application."""
-    app = create_app()
+    from netwatch.db import async_session_maker, run_migrations_with_lock
 
-    # Create tables and seed credentials in test database
-    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Run migrations under advisory lock and seed credentials
+    await run_migrations_with_lock()
 
-    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with session_maker() as session:
+    async with async_session_maker() as session:
         await seed_api_keys(session)
 
-    async def _test_get_db() -> AsyncGenerator[AsyncSession, None]:
-        async with session_maker() as session:
-            yield session
-
-    app.dependency_overrides[get_db] = _test_get_db
-
+    app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
-
-    app.dependency_overrides.clear()
-    await engine.dispose()
