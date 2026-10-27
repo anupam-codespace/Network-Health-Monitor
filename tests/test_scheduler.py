@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from prometheus_client import REGISTRY
@@ -115,7 +115,7 @@ async def test_failing_target_does_not_block_others(db_session: AsyncSession) ->
 
 @pytest.mark.asyncio
 async def test_scheduler_picks_up_target_add_and_delete(db_session: AsyncSession) -> None:
-    """Verifies that adding and deleting targets through the database updates tasks without restart."""
+    """Verifies that adding and deleting targets updates tasks without restart."""
     await db_session.execute(delete(ProbeResultRecord))
     await db_session.execute(delete(Target))
 

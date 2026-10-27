@@ -171,7 +171,8 @@ async def test_api_target_phase_series_math(
     assert len(series) == 1
     point = series[0]
 
-    # Math averages: dns=(2+4)/2=3.0, tcp=(4+6)/2=5.0, tls=(6+8)/2=7.0, http=(8+10)/2=9.0, total=(20+28)/2=24.0
+    # Math averages:
+    # dns=(2+4)/2=3.0, tcp=(4+6)/2=5.0, tls=(6+8)/2=7.0, http=(8+10)/2=9.0, total=(20+28)/2=24.0
     assert point["dns_ms"] == 3.0
     assert point["tcp_ms"] == 5.0
     assert point["tls_ms"] == 7.0
@@ -185,7 +186,7 @@ async def test_api_target_detail_and_not_found(
     async_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """Verifies /api/targets/{id} returns target entity, latest result, recent outcomes, and TLS info."""
+    """Verifies /api/targets/{id} returns target entity, latest result, outcomes, and TLS info."""
     await db_session.execute(delete(ProbeResultRecord))
     await db_session.execute(delete(Target))
 
@@ -223,6 +224,16 @@ async def test_api_target_detail_and_not_found(
     # Non-existent target should 404
     res_404 = await async_client.get("/api/targets/999999", headers=VIEWER_HEADERS)
     assert res_404.status_code == 404
+
+    res_series_404 = await async_client.get(
+        "/api/targets/999999/series", headers=VIEWER_HEADERS
+    )
+    assert res_series_404.status_code == 404
+
+    res_del_404 = await async_client.delete(
+        "/api/targets/999999", headers=ADMIN_HEADERS
+    )
+    assert res_del_404.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -270,7 +281,7 @@ async def test_api_export_csv_streaming(
 
 @pytest.mark.asyncio
 async def test_metrics_prometheus_netwatch_gauges(async_client: AsyncClient) -> None:
-    """Verifies that /metrics unauthenticated endpoint outputs NetWatch leadership and queue depth."""
+    """Verifies that unauthenticated /metrics outputs leadership and queue depth."""
     res = await async_client.get("/metrics")
     assert res.status_code == 200
     content = res.text

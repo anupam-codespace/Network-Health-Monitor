@@ -30,6 +30,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY alembic.ini ./
 COPY alembic ./alembic
+COPY targets.yaml ./
 COPY netwatch ./netwatch
 
 # Assign ownership to non-root user
