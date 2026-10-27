@@ -1,18 +1,30 @@
-"""Probing package for multi-phase network health monitoring."""
+"""Network health probe package."""
 
 from netwatch.probes.dns import probe_dns
-from netwatch.probes.http import probe_http
-from netwatch.probes.models import PhaseResult, TargetProbeResult
-from netwatch.probes.runner import run_all_probes
-from netwatch.probes.tcp import probe_tcp
-from netwatch.probes.tls import probe_tls
+from netwatch.probes.http import probe_http, send_http_request
+from netwatch.probes.models import (
+    DnsResult,
+    HttpResult,
+    ProbeCompositeResult,
+    TcpResult,
+    TlsResult,
+)
+from netwatch.probes.runner import run_probes
+from netwatch.probes.tcp import connect_tcp, probe_tcp
+from netwatch.probes.tls import probe_tls, upgrade_to_tls
 
 __all__ = [
-    "PhaseResult",
-    "TargetProbeResult",
+    "DnsResult",
+    "TcpResult",
+    "TlsResult",
+    "HttpResult",
+    "ProbeCompositeResult",
     "probe_dns",
     "probe_tcp",
+    "connect_tcp",
     "probe_tls",
+    "upgrade_to_tls",
     "probe_http",
-    "run_all_probes",
+    "send_http_request",
+    "run_probes",
 ]

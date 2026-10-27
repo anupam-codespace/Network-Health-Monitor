@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: netwatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: netwatch
+      POSTGRES_PASSWORD: netwatch
+      POSTGRES_DB: netwatch
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netwatch -d netwatch"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netwatch-replica-1
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://netwatch:netwatch@postgres:5432/netwatch
+      REPLICA_ID: replica-1
+      HTTP_PORT: 8001
+      ADMIN_API_KEY: netwatch-admin-secret-key-123
+      VIEWER_API_KEY: netwatch-viewer-secret-key-456
+      LOG_LEVEL: INFO
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

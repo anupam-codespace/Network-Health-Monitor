@@ -1,98 +1,122 @@
-from datetime import datetime, timezone
-from urllib.parse import urlparse
-
+import ssl
 from netwatch.probes.dns import probe_dns
-from netwatch.probes.http import probe_http
-from netwatch.probes.models import PhaseResult, TargetProbeResult
-from netwatch.probes.tcp import probe_tcp
-from netwatch.probes.tls import probe_tls
+from netwatch.probes.http import send_http_request
+from netwatch.probes.models import (
+    DnsResult,
+    HttpResult,
+    ProbeCompositeResult,
+    TcpResult,
+    TlsResult,
+)
+from netwatch.probes.tcp import connect_tcp
+from netwatch.probes.tls import upgrade_to_tls
 
 
-def parse_target(target: str) -> tuple[str, str, int, bool]:
-    """Normalizes input targets into structured parameters (url, host, port, is_tls)."""
-    raw = target.strip()
-    if not (raw.startswith("http://") or raw.startswith("https://")):
-        # Default bare hostnames to secure HTTPS for standard web endpoint health checks
-        raw = f"https://{raw}"
+async def run_probes(
+    host: str,
+    port: int = 443,
+    is_tls: bool | None = None,
+    timeout_s: float = 5.0,
+    ssl_context: ssl.SSLContext | None = None,
+) -> ProbeCompositeResult:
+    """Coordinates the 4-phase probe pipeline across a single connection, recording total latency."""
+    effective_tls = is_tls if is_tls is not None else (port == 443)
+    dns_res = await probe_dns(host, timeout_s=timeout_s)
 
-    parsed = urlparse(raw)
-    host = parsed.hostname or raw
-    is_tls = parsed.scheme == "https"
-    default_port = 443 if is_tls else 80
-    port = parsed.port or default_port
-
-    return raw, host, port, is_tls
-
-
-async def run_all_probes(
-    target: str,
-    phase_timeout: float = 5.0,
-) -> TargetProbeResult:
-    """Orchestrates multi-phase probes against a target, recording metrics even on failure."""
-    url, host, port, is_tls = parse_target(target)
-    timestamp = datetime.now(timezone.utc)
-
-    # 1. DNS Phase
-    dns_res = await probe_dns(host, timeout=phase_timeout)
-    resolved_ip: str | None = None
-    if dns_res.success and dns_res.details.get("resolved_ips"):
-        resolved_ip = dns_res.details["resolved_ips"][0]
-
-    # 2. TCP Phase
-    if dns_res.success:
-        tcp_res = await probe_tcp(host, port=port, ip=resolved_ip, timeout=phase_timeout)
-    else:
-        tcp_res = PhaseResult(
-            phase="tcp",
-            success=False,
-            duration_seconds=None,
-            error="Skipped: DNS resolution failed",
+    # If DNS resolution fails, downstream transport phases cannot execute
+    if not dns_res.ok or not dns_res.resolved_ip:
+        return ProbeCompositeResult(
+            host=host,
+            port=port,
+            ok=False,
+            dns=dns_res,
+            tcp=TcpResult(ok=False, error="Skipped: DNS resolution failed"),
+            tls=TlsResult(ok=False, error="Skipped: DNS resolution failed"),
+            http=HttpResult(ok=False, error="Skipped: DNS resolution failed"),
+            total_ms=dns_res.dns_ms,
+            first_failing_phase="dns",
+            dns_ms=dns_res.dns_ms,
+            error=dns_res.error,
         )
 
-    # 3. TLS Phase
-    tls_cert_expiry_days: float | None = None
-    if is_tls:
-        if tcp_res.success:
-            tls_res = await probe_tls(host, port=port, timeout=phase_timeout)
-            tls_cert_expiry_days = tls_res.details.get("days_to_expiry")
-        else:
-            tls_res = PhaseResult(
-                phase="tls",
-                success=False,
-                duration_seconds=None,
-                error="Skipped: TCP connection failed",
+    tcp_res, streams = await connect_tcp(dns_res.resolved_ip, port, timeout_s=timeout_s)
+    if not tcp_res.ok or not streams:
+        return ProbeCompositeResult(
+            host=host,
+            port=port,
+            ok=False,
+            dns=dns_res,
+            tcp=tcp_res,
+            tls=TlsResult(ok=False, error="Skipped: TCP connection failed"),
+            http=HttpResult(ok=False, error="Skipped: TCP connection failed"),
+            total_ms=round((dns_res.dns_ms or 0.0) + (tcp_res.tcp_ms or 0.0), 2),
+            first_failing_phase="tcp",
+            dns_ms=dns_res.dns_ms,
+            tcp_ms=tcp_res.tcp_ms,
+            error=tcp_res.error,
+        )
+
+    reader, writer = streams
+    try:
+        # 3. TLS Phase
+        if effective_tls:
+            tls_res = await upgrade_to_tls(
+                writer, host, timeout_s=timeout_s, ssl_context=ssl_context
             )
-    else:
-        tls_res = PhaseResult(
-            phase="tls",
-            success=True,
-            duration_seconds=0.0,
-            details={"skipped": True, "reason": "Non-TLS target"},
+            if not tls_res.ok:
+                return ProbeCompositeResult(
+                    host=host,
+                    port=port,
+                    ok=False,
+                    dns=dns_res,
+                    tcp=tcp_res,
+                    tls=tls_res,
+                    http=HttpResult(ok=False, error="Skipped: TLS handshake failed"),
+                    total_ms=round(
+                        (dns_res.dns_ms or 0.0) + (tcp_res.tcp_ms or 0.0) + (tls_res.tls_ms or 0.0),
+                        2,
+                    ),
+                    first_failing_phase="tls",
+                    dns_ms=dns_res.dns_ms,
+                    tcp_ms=tcp_res.tcp_ms,
+                    tls_ms=tls_res.tls_ms,
+                    error=tls_res.error,
+                )
+        else:
+            tls_res = TlsResult(ok=True, tls_ms=0.0, tls_days_left=None)
+
+        # 4. HTTP Phase
+        http_res = await send_http_request(reader, writer, host, timeout_s=timeout_s)
+        first_fail = None if http_res.ok else "http"
+        total_ms = round(
+            (dns_res.dns_ms or 0.0)
+            + (tcp_res.tcp_ms or 0.0)
+            + (tls_res.tls_ms or 0.0)
+            + (http_res.http_ms or 0.0),
+            2,
         )
 
-    # 4. HTTP Phase
-    if tcp_res.success and (not is_tls or tls_res.success):
-        http_res = await probe_http(url, timeout=phase_timeout)
-    else:
-        http_res = PhaseResult(
-            phase="http",
-            success=False,
-            duration_seconds=None,
-            error="Skipped: Prior transport phase failed",
+        return ProbeCompositeResult(
+            host=host,
+            port=port,
+            ok=http_res.ok,
+            dns=dns_res,
+            tcp=tcp_res,
+            tls=tls_res,
+            http=http_res,
+            total_ms=total_ms,
+            first_failing_phase=first_fail,
+            dns_ms=dns_res.dns_ms,
+            tcp_ms=tcp_res.tcp_ms,
+            tls_ms=tls_res.tls_ms,
+            http_ms=http_res.http_ms,
+            status_code=http_res.status_code,
+            tls_days_left=tls_res.tls_days_left,
+            error=http_res.error,
         )
-
-    overall_success = dns_res.success and tcp_res.success and tls_res.success and http_res.success
-
-    return TargetProbeResult(
-        target=target,
-        url=url,
-        host=host,
-        port=port,
-        timestamp=timestamp,
-        dns=dns_res,
-        tcp=tcp_res,
-        tls=tls_res,
-        http=http_res,
-        tls_cert_expiry_days=tls_cert_expiry_days,
-        success=overall_success,
-    )
+    finally:
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:
+            pass

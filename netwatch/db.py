@@ -58,3 +58,21 @@ async def acquire_advisory_lock(lock_id: int):
             )
             await conn.commit()
             logger.info("Released PostgreSQL advisory lock %d", lock_id)
+
+
+def _run_alembic_upgrade() -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+
+
+async def run_migrations_with_lock() -> None:
+    """Acquires a PostgreSQL advisory lock to ensure only one replica runs schema migrations at startup."""
+    async with acquire_advisory_lock(MIGRATION_ADVISORY_LOCK_ID):
+        logger.info("Executing Alembic migrations under advisory lock...")
+        import asyncio
+        await asyncio.to_thread(_run_alembic_upgrade)
+        logger.info("Alembic migrations completed successfully.")
+
