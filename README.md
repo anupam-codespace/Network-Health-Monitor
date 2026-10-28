@@ -1,4 +1,4 @@
-# NetWatch: Distributed Network Health Monitor
+# NetWatch (Distributed Network Health Monitor)
 
 NetWatch is an enterprise-grade, active-standby network availability and latency monitoring system. It continuously executes multi-phase latency probes across discrete network layers (DNS resolution, TCP connection, TLS handshake/certificate lifecycle, and HTTP response time), persists telemetry into PostgreSQL with monotonic epoch fencing, coordinates automated replica failover via PostgreSQL advisory locks, and streams real-time updates over Server-Sent Events (SSE) to a mobile-first operations dashboard.
 
