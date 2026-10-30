@@ -54,3 +54,4 @@ docs/design-tokens.md
 # Linter and tool caches
 .ruff_cache/
 .vercel/
+.vercel
