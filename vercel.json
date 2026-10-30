@@ -1,25 +1,25 @@
 {
   "version": 2,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
     },
     {
-      "source": "/healthz",
-      "destination": "/api/index.py"
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/metrics",
-      "destination": "/api/index.py"
+      "src": "/healthz",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/static/(.*)",
-      "destination": "/static/$1"
+      "src": "/metrics",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

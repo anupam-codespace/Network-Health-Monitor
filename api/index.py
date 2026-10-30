@@ -674,11 +674,8 @@ async def metrics():
     return PlainTextResponse(content="\n".join(lines) + "\n", media_type="text/plain")
 
 
-@app.get("/")
-async def root_index():
-    index_path = ROOT_DIR / "public" / "index.html"
-    if not index_path.exists():
-        index_path = ROOT_DIR / "netwatch" / "static" / "index.html"
-    if index_path.exists():
-        return FileResponse(index_path)
-    return PlainTextResponse("NetWatch Serverless API Running")
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
+async def catch_all(full_path: str):
+    raise HTTPException(status_code=404, detail="Endpoint not found")
+
+
