@@ -25,7 +25,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
 # Ensure repository root is on sys.path
@@ -425,13 +425,13 @@ async def delete_target(target_id: int):
 async def get_target_phase_series(
     target_id: int,
     auth: Annotated[dict[str, str], Depends(authenticate)],
-    range: str = Query(default="24h", pattern="^(1h|24h|7d)$"),
+    time_range: str = Query(default="24h", alias="range", pattern="^(1h|24h|7d)$"),
 ):
     target = store.get_target(target_id)
     if not target:
         raise HTTPException(status_code=404, detail=f"Target {target_id} not found")
 
-    cutoff, bucket_sec = parse_time_range(range)
+    cutoff, bucket_sec = parse_time_range(time_range)
     now = datetime.now(timezone.utc)
     points: list[PhaseSeriesPoint] = []
 
@@ -464,9 +464,9 @@ async def get_target_phase_series(
 @api_router.get("/summary", response_model=SummaryResponse)
 async def get_summary(
     auth: Annotated[dict[str, str], Depends(authenticate)],
-    range: str = Query(default="24h", pattern="^(1h|24h|7d)$"),
+    time_range: str = Query(default="24h", alias="range", pattern="^(1h|24h|7d)$"),
 ):
-    cutoff, bucket_sec = parse_time_range(range)
+    cutoff, bucket_sec = parse_time_range(time_range)
     now = datetime.now(timezone.utc)
 
     targets_total = len(store.targets)
@@ -591,7 +591,7 @@ async def event_stream(
 @api_router.get("/export.csv")
 async def export_csv(
     auth: Annotated[dict[str, str], Depends(authenticate)],
-    range: str = Query(default="24h", pattern="^(1h|24h|7d)$"),
+    time_range: str = Query(default="24h", alias="range", pattern="^(1h|24h|7d)$"),
 ):
     output = io.StringIO()
     writer = csv.writer(output)
@@ -639,7 +639,7 @@ async def export_csv(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="netwatch_export_{range}.csv"'},
+        headers={"Content-Disposition": f'attachment; filename="netwatch_export_{time_range}.csv"'},
     )
 
 
