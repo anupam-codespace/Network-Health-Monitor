@@ -1,5 +1,10 @@
 # NetWatch (Distributed Network Health Monitor)
 
+> **NetWatch is a real-time network monitor that breaks down latency across DNS, TCP, TLS, and HTTP layers. It runs automated probes with instant leader failover and streams live metrics to a clean dashboard. Users simply add endpoints to spot outages, track cert expiry, and diagnose bottlenecks before users are impacted.**
+
+[![Live Demo](https://img.shields.io/badge/Vercel-Live_Demo-black?style=flat&logo=vercel)](https://netwatch-brown.vercel.app)
+[![API Health](https://img.shields.io/badge/API-Live-success?style=flat)](https://netwatch-brown.vercel.app/healthz)
+
 NetWatch is an enterprise-grade, active-standby network availability and latency monitoring system. It continuously executes multi-phase latency probes across discrete network layers (DNS resolution, TCP connection, TLS handshake/certificate lifecycle, and HTTP response time), persists telemetry into PostgreSQL with monotonic epoch fencing, coordinates automated replica failover via PostgreSQL advisory locks, and streams real-time updates over Server-Sent Events (SSE) to a mobile-first operations dashboard.
 
 ![NetWatch System Architecture](docs/assets/netwatch_system_architecture.jpg)
