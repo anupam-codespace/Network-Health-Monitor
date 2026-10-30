@@ -6,6 +6,7 @@ NetWatch is an enterprise-grade, active-standby network availability and latency
 
 ---
 
+
 ## System Use Case Model
 
 The following diagram defines the system boundary of NetWatch, mapping primary actors (Cluster Administrator, Viewer / NOC Operator, Automated System Engine, and External Observability) to functional capabilities across target management, live telemetry streaming, fault failover, and metrics collection.
