@@ -5,10 +5,14 @@ from pathlib import Path
 
 import httpx
 import pytest
-from playwright.async_api import Browser, Page, async_playwright
 from sqlalchemy import text
 
 from netwatch.db import async_session_maker
+
+playwright_async_api = pytest.importorskip("playwright.async_api")
+Browser = playwright_async_api.Browser
+Page = playwright_async_api.Page
+async_playwright = playwright_async_api.async_playwright
 
 ADMIN_KEY = "netwatch-admin-secret-key-123"
 VIEWER_KEY = "netwatch-viewer-secret-key-456"
